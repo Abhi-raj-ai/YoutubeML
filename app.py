@@ -3,7 +3,7 @@ import streamlit as st
 from utils.channel_service import process_channel
 
 
-st.title("YouTube Channel Analyzer")
+st.title("YouTube Channel Analyzer - Youtube ML")
 
 
 channel_name = st.text_input(
