@@ -1,40 +1,44 @@
 import streamlit as st
 
-from utils.channel_service import process_channel
 
-
-st.title("YouTube Channel Analyzer - Youtube ML")
-
-
-channel_name = st.text_input(
-    "Enter YouTube channel name",
-    placeholder="e.g. Mr beast"
+st.set_page_config(
+    page_title="YoutubeML",
+    page_icon="🎬",
+    layout="wide"
 )
 
 
-if st.button("Analyze"):
+st.title("🎬 YoutubeML")
 
-    if channel_name.strip() == "":
-        st.warning("Please enter a channel name.")
+st.subheader("YouTube Analytics & NLP Platform")
 
-    else:
+st.write(
+    """
+    YoutubeML analyzes YouTube channels, videos, and audience comments
+    using machine learning and natural language processing.
+    """
+)
 
-        channel_data, videos_data, video_comments = process_channel(
-            channel_name
-        )
+st.divider()
 
-        if channel_data is not None:
+st.subheader("🚀 Available Features")
 
-            st.success("Channel found!")
+st.markdown(
+    """
+    ### 📊 Dashboard
+    Explore channel information and latest videos.
 
-            st.subheader("Channel Information")
+    ### 📈 Video Analytics
+    Analyze video performance, audience intent, and sentiment.
 
-            st.write(channel_data)
+    ### 💬 Comment Analysis
+    Understand what viewers are saying.
 
-            st.subheader("Videos")
+    ### 🤖 Comment Predictions
+    Explore individual NLP predictions from the trained models.
+    """
+)
 
-            st.write(videos_data)
-
-        else:
-
-            st.error("Unable to process channel.")
+st.info(
+    "Use the sidebar to navigate between the different sections."
+)
