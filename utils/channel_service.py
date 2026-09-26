@@ -610,3 +610,48 @@ def get_video_list(videos):
     return video_list
 
 
+def get_video_analytics_data(channel_name):
+
+    channel_data = search_channel(channel_name)
+
+    if channel_data:
+        extracted_channel_data = {
+            "channel_id": channel_data["channel_id"],
+            "channel_name": channel_data["channel_name"],
+            "channel_description": channel_data["channel_description"],
+            "publish_date": channel_data["published_date"],
+        }
+
+        channel_id = extracted_channel_data["channel_id"]
+
+        video_datas, video_ids_string = get_recent_videos(channel_id)
+        videos_stats = get_video_stats(video_ids_string)
+
+        extracted_videos_data = []
+
+        for video_data in video_datas:
+            video_id = video_data["video_id"]
+
+            for video_stats in videos_stats:
+
+                if video_stats["video_id"] == video_id:
+
+                    videos_data = {
+                        "channel_id": video_data["channel_id"],
+                        "video_id": video_id,
+                        "title": video_data["title"],
+                        "description": video_data["description"],
+                        "published_date": video_data["published_date"],
+                        "view_count": video_stats["view_count"],
+                        "like_count": video_stats["like_count"],
+                        "comment_count": video_stats["comment_count"],
+                    }
+
+                    extracted_videos_data.append(videos_data)
+
+        return extracted_channel_data, extracted_videos_data
+
+    else:
+        return None
+
+
