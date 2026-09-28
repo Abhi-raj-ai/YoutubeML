@@ -96,163 +96,92 @@ def refresh_video(video_id):
         return None
 
 
-def combine_predictions(intent_results,sentiment_results):
+def combine_predictions(intent_results, sentiment_results):
 
-    joined = []
+    combined_results = []
 
-    for intent_result, sentiment_result in zip(
-            intent_results,
-            sentiment_results
-    ):
+    # Create a lookup dictionary for sentiment predictions
+    sentiment_lookup = {
+        result["comment_id"]: result
+        for result in sentiment_results
+    }
 
-        merged = {
-            **intent_result,
-            **sentiment_result
-        }
+    # Match intent and sentiment using comment_id
+    for intent_result in intent_results:
 
-        joined.append(
-            merged
-        )
+        comment_id = intent_result["comment_id"]
 
-    return joined
+        sentiment_result = sentiment_lookup.get(comment_id)
+
+        # Only combine when a matching sentiment prediction exists
+        if sentiment_result is not None:
+
+            combined_result = {
+                "comment_id": comment_id,
+
+                "Intent": intent_result["Intent"],
+                "Intent_Confidence": intent_result["Intent_Confidence"],
+                "Final_Intent": intent_result["Final_Intent"],
+
+                "Sentiment": sentiment_result["Sentiment"],
+                "Sentiment_Confidence": (
+                    sentiment_result["Sentiment_Confidence"]
+                )
+            }
+
+            combined_results.append(combined_result)
+
+    return combined_results
 
 
 def process_comments(video_id):
 
-    try:
+    # --------------------------------------------------
+    # Get comments from database or YouTube API
+    # --------------------------------------------------
 
-        # =====================================================
-        # CHECK WHETHER COMMENTS NEED REFRESHING
-        # =====================================================
+    comments = get_or_fetch_comments(video_id)
 
-        refresh_needed = should_refresh_comments(
-            video_id
-        )
-
-        # =====================================================
-        # CASE 1: GET COMMENTS FROM YOUTUBE API
-        # =====================================================
-
-        if refresh_needed is True:
-
-            comments_api = get_video_comments(
-                video_id
-            )
-
-            comments = comments_api
-
-            if comments_api is None:
-
-                return None
-
-            # Save fresh comments into database
-            save_comments(
-                comments_api
-            )
-
-            # -------------------------------------------------
-            # Extract only comment text and comment id
-            # -------------------------------------------------
-
-            comment_texts = [
-                comment["comment_text"]
-                for comment in comments
-            ]
-
-        # =====================================================
-        # CASE 2: GET COMMENTS FROM DATABASE
-        # =====================================================
-
-        else:
-
-            comments_database = get_comments(
-                video_id
-            )
-
-            comments = comments_database
-
-            if comments_database is None:
-
-                return None
-
-            # -------------------------------------------------
-            # Extract only comment text and comment id
-            # -------------------------------------------------
-
-            comment_texts = [
-                comment["comment_text"]
-                for comment in comments
-            ]
-
-
-        # =====================================================
-        # CHECK IF THERE ARE COMMENTS
-        # =====================================================
-
-        if not comment_texts:
-
-            return []
-
-        # =====================================================
-        # INTENT PREDICTION
-        # =====================================================
-
-        predicted_comments = predict_comments(
-            comment_texts
-        )
-
-        # =====================================================
-        # SENTIMENT PREDICTION
-        # =====================================================
-
-        predicted_sentiments = predict_sentiments(
-            comment_texts
-        )
-
-        # =====================================================
-        # COMBINE BOTH PREDICTIONS
-        # =====================================================
-
-        combined_predictions = combine_predictions(
-            predicted_comments,
-            predicted_sentiments
-        )
-
-        # =====================================================
-        # ATTACHING COMMENT ID
-        # =====================================================
-
-        for comment, prediction in zip(comments, combined_predictions):
-            prediction['comment_id'] = comment["comment_id"]
-        save_predictions(combined_predictions)
-
-        # =====================================================
-        # RETURN FINAL RESULTS
-        # =====================================================
-
-        return combined_predictions
-
-    except HttpError as error:
-
-        print(
-            f"YouTube API error while processing comments: {error}"
-        )
-
+    # No comments available
+    if not comments:
         return None
 
-    except Exception as error:
+    # --------------------------------------------------
+    # Intent prediction
+    # --------------------------------------------------
 
-        import traceback
+    intent_results = predict_comments(comments)
 
-        print(
-            f"Error while processing comments: {error}"
+    # --------------------------------------------------
+    # Sentiment prediction
+    # --------------------------------------------------
+
+    sentiment_results = predict_sentiments(comments)
+
+    # --------------------------------------------------
+    # Combine intent + sentiment predictions
+    # --------------------------------------------------
+
+    combined_predictions = combine_predictions(
+        intent_results,
+        sentiment_results
+    )
+
+    # --------------------------------------------------
+    # Save predictions to database
+    # --------------------------------------------------
+
+    if combined_predictions:
+
+        save_predictions(
+            combined_predictions
         )
 
-        traceback.print_exc()
+    # --------------------------------------------------
+    # Return combined predictions
+    # --------------------------------------------------
 
-        return None
-
-
+    return combined_predictions
 
 def process_channel(channel_name):
 
@@ -655,3 +584,36 @@ def get_video_analytics_data(channel_name):
         return None
 
 
+def get_or_fetch_comments(video_id):
+
+    try:
+
+        comments_database = get_comments(video_id)
+
+        if comments_database:
+
+            if should_refresh_comments(video_id):
+
+                comments_api = get_video_comments(video_id)
+
+                save_comments(comments_api)
+
+                return comments_api
+
+            return comments_database
+
+        else:
+
+            comments_api = get_video_comments(video_id)
+
+            save_comments(comments_api)
+
+            return comments_api
+
+    except HttpError as error:
+
+        print(
+            f"YouTube API error while processing comments: {error}"
+        )
+
+        return None

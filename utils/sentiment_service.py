@@ -15,13 +15,14 @@ sentiment_model = joblib.load(MODEL_PATH)
 tfidf_vectorizer = joblib.load(VECTORIZER_PATH)
 
 
-
 def predict_sentiments(comments):
 
     results = []
 
+    comments_text = [comment['comment_text'] for comment in comments]
+
     # Convert all comments into TF-IDF vectors at once
-    comments_tfidf = tfidf_vectorizer.transform(comments)
+    comments_tfidf = tfidf_vectorizer.transform(comments_text)
 
     # Predict sentiment for all comments
     predict_sentiments = sentiment_model.predict(comments_tfidf)
@@ -43,9 +44,10 @@ def predict_sentiments(comments):
 
         # Store result
         result = {
-            "Comment": comment,
+            "comment_id": comment['comment_id'],
+            "Comment": comment['comment_text'],
             "Sentiment": sentiment,
-            "Sentiment_Confidence": round(confidence_score * 100,2)
+            "Sentiment_Confidence": float(round(confidence_score * 100,2))
         }
 
         results.append(result)
